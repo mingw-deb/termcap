@@ -76,6 +76,11 @@ override_dh_auto_build:
 	do \
 		pushd build-$$target && \
 		$(EXECUTE) make && \
+		echo "Build a shared library.  No need for -fPIC on Windows." && \
+		$${target}-gcc -shared \
+		      -Wl,--out-implib,libtermcap.dll.a \
+		      -o libtermcap-0.dll \
+		      termcap.o tparam.o version.o && \
 		popd || exit 1 ; \
 	done
 
@@ -83,7 +88,14 @@ override_dh_auto_install:
 	for target in $(TARGETS) ; \
 	do \
 		pushd build-$$target && \
-		$(EXECUTE) make DESTDIR=$(CURDIR)/debian/tmp install  && \
+		$(EXECUTE) make prefix=$(CURDIR)/debian/tmp/usr/$$target \
+			exec_prefix=$(CURDIR)/debian/tmp/usr/$$target \
+			oldincludedir=$(CURDIR)/debian/tmp/usr/$$target/include \
+			install || exit 1 ; \
+		install -dm 0755 "$(CURDIR)/debian/tmp/usr/$${target}/bin" && \
+		install -dm 0755 "$(CURDIR)/debian/tmp/usr/$${target}/lib" && \
+		install -m 0755 libtermcap-0.dll "$(CURDIR)/debian/tmp/usr/$${target}/bin" && \
+		install -m 0644 libtermcap.dll.a "$(CURDIR)/debian/tmp/usr/$${target}/lib" && \
 		echo $(CURDIR)/debian/tmp/usr/$${target}/lib/*.dll.a ; \
 		ls $(CURDIR)/debian/tmp/usr/$${target}/lib/*.dll.a ; \
 		for d in  $(CURDIR)/debian/tmp/usr/$${target}/lib/*.dll.a ; \
